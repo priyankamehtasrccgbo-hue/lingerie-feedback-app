@@ -1,10 +1,10 @@
 import streamlit as st
+import pandas as pd
 
-st.title("Lingerie Feedback Analyzer (Free Version)")
+st.title("Lingerie Feedback Analyzer (Insights Dashboard)")
 
 reviews_input = st.text_area("Paste multiple reviews (one per line)")
 
-# keyword rules
 positive_words = ["perfect", "comfortable", "soft", "great", "excellent", "nice", "love"]
 negative_words = ["tight", "itchy", "pain", "hurt", "poor", "rough", "loose", "bad"]
 
@@ -19,14 +19,12 @@ topics_keywords = {
 def analyze_review(text):
     text_lower = text.lower()
 
-    # sentiment
     sentiment = "Neutral"
     if any(word in text_lower for word in positive_words):
         sentiment = "Positive"
     if any(word in text_lower for word in negative_words):
         sentiment = "Negative"
 
-    # topics
     topics = []
     for topic, words in topics_keywords.items():
         if any(word in text_lower for word in words):
@@ -53,11 +51,18 @@ if st.button("Analyze Reviews"):
             for t in topics:
                 topic_count[t] += 1
 
-        st.subheader("Sentiment Summary")
-        st.write(sentiment_count)
+        # 📊 Sentiment chart
+        st.subheader("Sentiment Distribution")
+        st.bar_chart(pd.DataFrame(sentiment_count, index=[0]))
 
-        st.subheader("Top Topics")
-        st.write(topic_count)
+        # 📊 Topic chart
+        st.subheader("Topic Frequency")
+        st.bar_chart(pd.DataFrame(topic_count, index=[0]))
+
+        # 🧠 Insight generation
+        worst_topic = max(topic_count, key=topic_count.get)
+        st.subheader("Key Insight")
+        st.write(f"Most mentioned issue area: **{worst_topic}**")
 
     else:
         st.warning("Paste some reviews")
