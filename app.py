@@ -1,36 +1,44 @@
 import streamlit as st
-from openai import OpenAI
 
-client = OpenAI()
-
-st.title("Lingerie Feedback Analyzer (Insights Mode)")
+st.title("Lingerie Feedback Analyzer (Free Version)")
 
 reviews_input = st.text_area("Paste multiple reviews (one per line)")
 
+# keyword rules
+positive_words = ["perfect", "comfortable", "soft", "great", "excellent", "nice", "love"]
+negative_words = ["tight", "itchy", "pain", "hurt", "poor", "rough", "loose", "bad"]
+
+topics_keywords = {
+    "fit": ["fit", "tight", "loose"],
+    "comfort": ["comfortable", "uncomfortable", "hurt", "pain"],
+    "size": ["size", "small", "big"],
+    "fabric": ["fabric", "material", "soft", "itchy", "rough"],
+    "straps": ["strap", "straps"]
+}
+
 def analyze_review(text):
-    prompt = f"""
-You are analyzing lingerie product reviews.
+    text_lower = text.lower()
 
-Return in JSON:
-{{
-  "sentiment": "Positive/Neutral/Negative",
-  "topics": ["fit","comfort","size","fabric","straps"]
-}}
+    # sentiment
+    sentiment = "Neutral"
+    if any(word in text_lower for word in positive_words):
+        sentiment = "Positive"
+    if any(word in text_lower for word in negative_words):
+        sentiment = "Negative"
 
-Review: "{text}"
-"""
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}]
-    )
-    return response.choices[0].message.content
+    # topics
+    topics = []
+    for topic, words in topics_keywords.items():
+        if any(word in text_lower for word in words):
+            topics.append(topic)
+
+    return sentiment, topics
 
 
 if st.button("Analyze Reviews"):
     if reviews_input:
         reviews = reviews_input.split("\n")
 
-        results = []
         sentiment_count = {"Positive":0, "Neutral":0, "Negative":0}
         topic_count = {"fit":0, "comfort":0, "size":0, "fabric":0, "straps":0}
 
@@ -38,19 +46,12 @@ if st.button("Analyze Reviews"):
             if r.strip() == "":
                 continue
 
-            output = analyze_review(r)
+            sentiment, topics = analyze_review(r)
 
-            # basic parsing (not perfect but works for demo)
-            if "Positive" in output:
-                sentiment_count["Positive"] += 1
-            elif "Negative" in output:
-                sentiment_count["Negative"] += 1
-            else:
-                sentiment_count["Neutral"] += 1
+            sentiment_count[sentiment] += 1
 
-            for t in topic_count.keys():
-                if t in output.lower():
-                    topic_count[t] += 1
+            for t in topics:
+                topic_count[t] += 1
 
         st.subheader("Sentiment Summary")
         st.write(sentiment_count)
