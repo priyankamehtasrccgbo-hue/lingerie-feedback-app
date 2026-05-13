@@ -1,68 +1,25 @@
 import streamlit as st
-import pandas as pd
+from openai import OpenAI
 
-st.title("Lingerie Feedback Analyzer (Insights Dashboard)")
+client = OpenAI(api_key="YOUR_API_KEY")
 
-reviews_input = st.text_area("Paste multiple reviews (one per line)")
+st.title("🛍️ AI Product Attribute Extractor")
 
-positive_words = ["perfect", "comfortable", "soft", "great", "excellent", "nice", "love"]
-negative_words = ["tight", "itchy", "pain", "hurt", "poor", "rough", "loose", "bad"]
+user_input = st.text_area("Enter product description:")
 
-topics_keywords = {
-    "fit": ["fit", "tight", "loose"],
-    "comfort": ["comfortable", "uncomfortable", "hurt", "pain"],
-    "size": ["size", "small", "big"],
-    "fabric": ["fabric", "material", "soft", "itchy", "rough"],
-    "straps": ["strap", "straps"]
-}
+if st.button("Extract Attributes"):
+    if user_input:
+        prompt = f"""
+        Extract structured attributes from the product description below.
+        Return JSON with keys like fabric, padding, support, wire, use_case.
 
-def analyze_review(text):
-    text_lower = text.lower()
+        Description:
+        {user_input}
+        """
 
-    sentiment = "Neutral"
-    if any(word in text_lower for word in positive_words):
-        sentiment = "Positive"
-    if any(word in text_lower for word in negative_words):
-        sentiment = "Negative"
+        response = client.chat.completions.create(
+            model="gpt-4.1-mini",
+            messages=[{"role": "user", "content": prompt}],
+        )
 
-    topics = []
-    for topic, words in topics_keywords.items():
-        if any(word in text_lower for word in words):
-            topics.append(topic)
-
-    return sentiment, topics
-
-
-if st.button("Analyze Reviews"):
-    if reviews_input:
-        reviews = reviews_input.split("\n")
-
-        sentiment_count = {"Positive":0, "Neutral":0, "Negative":0}
-        topic_count = {"fit":0, "comfort":0, "size":0, "fabric":0, "straps":0}
-
-        for r in reviews:
-            if r.strip() == "":
-                continue
-
-            sentiment, topics = analyze_review(r)
-
-            sentiment_count[sentiment] += 1
-
-            for t in topics:
-                topic_count[t] += 1
-
-        # 📊 Sentiment chart
-        st.subheader("Sentiment Distribution")
-        st.bar_chart(pd.DataFrame(sentiment_count, index=[0]))
-
-        # 📊 Topic chart
-        st.subheader("Topic Frequency")
-        st.bar_chart(pd.DataFrame(topic_count, index=[0]))
-
-        # 🧠 Insight generation
-        worst_topic = max(topic_count, key=topic_count.get)
-        st.subheader("Key Insight")
-        st.write(f"Most mentioned issue area: **{worst_topic}**")
-
-    else:
-        st.warning("Paste some reviews")
+        st.code(response.choices[0].message.content, language="json")
